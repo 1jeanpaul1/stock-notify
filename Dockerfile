@@ -17,13 +17,13 @@ RUN mvn package
 
 FROM openjdk:8-slim as runtime
 # Expose the port
-EXPOSE 8086
+EXPOSE 8096
 #Set app home folder
 ENV APP_HOME /app
 #Possibility to set JVM options (https://www.oracle.com/technetwork/java/javase/tech/vmoptions-jsp-140102.html)
 ENV JAVA_OPTS=""
 # Set ENV variables
-ENV PORT=8086
+ENV PORT=8096
 ENV DISCOVERY_URL="http://discovery:8761"
 
 #Create base app folder

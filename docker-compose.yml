@@ -5,5 +5,15 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8086:8086"
+      - "8096:8096"
+    depends_on:
+      - redis
+  redis:
+    image: "redis:alpine"
+    hostname: redis
+    ports:
+      - "6379:6379"
+#   command: ["redis-server", "--appendonly", "yes"]
+#    volumes:
+#      - redis-data:/data
 
