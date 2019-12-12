@@ -7,6 +7,8 @@ import com.fcgl.madrid.stock.model.BusinessWireBody;
 import com.fcgl.madrid.stock.model.GlobalNewsWireBody;
 import com.fcgl.madrid.stock.model.IArticleBody;
 import com.fcgl.madrid.stock.repository.ArticlesRepository;
+import net.swisstech.bitly.BitlyClient;
+import net.swisstech.bitly.model.v3.ShortenResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jsoup.Connection;
@@ -41,22 +43,30 @@ public class GlobalNewsWire implements IArticleParser {
         keyWords.add("phase");
         keyWords.add("guidance");
         keyWords.add("fda");
+        keyWords.add("outperform");
+        keyWords.add("clinical");
+        keyWords.add("report");
     }
 
 
     public ResponseEntity<Response<List<IArticleBody>>> getAllImportantArticles() {
         NewArticleResponse newArticleResponse = getNewArticles();
+        List<IArticleBody> importantList = new ArrayList<>();
         if (newArticleResponse.getInternalStatus().getHttpCode().equals(HttpStatus.NOT_FOUND)) {
-            Response response = new Response<List<IArticleBody>>(InternalStatus.NOT_FOUND, null);
+            Response response = new Response<List<IArticleBody>>(InternalStatus.NOT_FOUND, importantList);
             return new ResponseEntity<Response<List<IArticleBody>>>(response, HttpStatus.NOT_FOUND);
         }
         List<IArticleBody> globalNewsWireBodyList = newArticleResponse.getNewArticles();
-        List<IArticleBody> importantList = new ArrayList<>();
         int count = 0;
         for (IArticleBody globalNewsWireBody : globalNewsWireBodyList) {
             for (String keyWord : this.keyWords) {
                 if (globalNewsWireBody.getArticleHeadline().contains(keyWord)) {
-                    importantList.add(globalNewsWireBody);
+                    IArticleBody temp = new GlobalNewsWireBody(
+                            shortenUrl(globalNewsWireBody.getArticleUrl()),
+                            globalNewsWireBody.getArticleHeadline()
+                    );
+                    importantList.add(temp);
+                    break;
                 }
             }
             count++;
@@ -85,7 +95,7 @@ public class GlobalNewsWire implements IArticleParser {
         Integer pageCount = 1;
         while (retryCount < RETRY) {
             try {
-                while (pageCount < NUMBER_OF_PAGES) {
+                while (pageCount <= NUMBER_OF_PAGES) {
                     Document doc = Jsoup.connect("https://www.globenewswire.com/en/Index?page=" + pageCount).get();
                     Elements listOfArticles = doc.select(".results-link");
                     for (Element el : listOfArticles) {
@@ -106,6 +116,22 @@ public class GlobalNewsWire implements IArticleParser {
             }
         }
         return new NewArticleResponse(globalNewsWireBodyList, InternalStatus.NOT_FOUND);
+    }
+
+    private String shortenUrl(String url) {
+        BitlyClient client = new BitlyClient("");
+        net.swisstech.bitly.model.Response<ShortenResponse> resp = client.shorten()
+                .setLongUrl(url)
+                .call();
+        ShortenResponse shortUrl = resp.data;
+        if (shortUrl == null) {
+            System.out.println("******ERROR WITH BITLY*******");
+            System.out.println("status code: " + resp.status_code);
+            System.out.println("status text: " + resp.status_txt);
+            return DOMAIN_NAME;
+        } else {
+            return shortUrl.url;
+        }
     }
 }
 

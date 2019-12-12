@@ -6,6 +6,8 @@ import com.fcgl.madrid.stock.Service.model.NewArticleResponse;
 import com.fcgl.madrid.stock.model.BusinessWireBody;
 import com.fcgl.madrid.stock.model.IArticleBody;
 import com.fcgl.madrid.stock.repository.ArticlesRepository;
+import net.swisstech.bitly.BitlyClient;
+import net.swisstech.bitly.model.v3.ShortenResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,8 @@ public class BusinessWire implements IArticleParser {
     private Log logger;
     private static final Integer RETRY = 3;
     private ArticlesRepository articlesRepository;
+    private static final String DOMAIN_NAME = "https://www.businesswire.com";
+
     @Autowired
     public BusinessWire(ArticlesRepository articlesRepository) {
         this.logger = LogFactory.getLog(BusinessWire.class);
@@ -39,22 +43,31 @@ public class BusinessWire implements IArticleParser {
         keyWords.add("phase");
         keyWords.add("guidance");
         keyWords.add("fda");
+        keyWords.add("outperform");
+        keyWords.add("clinical");
+        keyWords.add("report");
     }
 
 
     public ResponseEntity<Response<List<IArticleBody>>> getAllImportantArticles() {
         NewArticleResponse newArticleResponse = getNewArticles();
+        List<IArticleBody> importantList = new ArrayList<>();
         if (newArticleResponse.getInternalStatus().getHttpCode().equals(HttpStatus.NOT_FOUND)) {
-            Response response = new Response<List<IArticleBody>>(InternalStatus.NOT_FOUND, null);
+            Response response = new Response<List<IArticleBody>>(InternalStatus.NOT_FOUND, importantList);
             return new ResponseEntity<Response<List<IArticleBody>>>(response, HttpStatus.NOT_FOUND);
         }
         List<IArticleBody> businessWireBodyList = newArticleResponse.getNewArticles();
-        List<IArticleBody> importantList = new ArrayList<>();
+
         int count = 0;
         for (IArticleBody businessWireBody : businessWireBodyList) {
             for (String keyWord : this.keyWords) {
                 if (businessWireBody.getArticleHeadline().contains(keyWord)) {
-                    importantList.add(businessWireBody);
+                    IArticleBody temp = new BusinessWireBody(
+                            shortenUrl(businessWireBody.getArticleUrl()),
+                            businessWireBody.getArticleHeadline()
+                    );
+                    importantList.add(temp);
+                    break;
                 }
             }
             count++;
@@ -93,5 +106,21 @@ public class BusinessWire implements IArticleParser {
             }
         }
         return new NewArticleResponse(businessWireBodyList, InternalStatus.NOT_FOUND);
+    }
+
+    private String shortenUrl(String url) {
+        BitlyClient client = new BitlyClient("");
+        net.swisstech.bitly.model.Response<ShortenResponse> resp = client.shorten()
+                .setLongUrl(url)
+                .call();
+        ShortenResponse shortUrl = resp.data;
+        if (shortUrl == null) {
+            System.out.println("******ERROR WITH BITLY*******");
+            System.out.println("status code: " + resp.status_code);
+            System.out.println("status text: " + resp.status_txt);
+            return DOMAIN_NAME;
+        } else {
+            return shortUrl.url;
+        }
     }
 }

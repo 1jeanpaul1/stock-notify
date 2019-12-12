@@ -15,9 +15,11 @@ public class TwilioSms {
     public static final String AUTH_TOKEN  = "";
 
     // Create a phone number in the Twilio console
-    public static final String TWILIO_NUMBER = "+12512559842";
+    public static final String TWILIO_NUMBER = "";
+    public static final String DEFAULT_NUMBER = "";
+    public static final Integer SMS_MAX = 160;
 
-    public String sendSms(String msg, String phoneNumber) {
+    public static String sendSms(String msg, String phoneNumber) {
         //TODO: What type of errors can Twilio and Message packages throw
         Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         Message message = Message.creator(
@@ -28,7 +30,7 @@ public class TwilioSms {
         return message.getSid();
     }
 
-    public List<String> sendMultipleSms(List<String> messages, String phoneNumber) {
+    public static List<String> sendMultipleSms(List<String> messages, String phoneNumber) {
         List<String> sids = new ArrayList<>();
         for (String message : messages) {
             sids.add(sendSms(message, phoneNumber));

@@ -13,4 +13,6 @@ public interface IArticleBody {
 
     public String getName();
 
+    public String toStringMax(Integer length);
+
 }

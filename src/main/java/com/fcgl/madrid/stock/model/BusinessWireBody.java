@@ -32,4 +32,10 @@ public class BusinessWireBody implements IArticleBody {
     public String getName() {
         return NAME;
     }
+
+    @Override
+    public String toStringMax(Integer length) {
+        String full = this.articleUrl + "\n" + this.articleHeadline;
+        return full.substring(0, Math.min(length, full.length()));
+    }
 }
